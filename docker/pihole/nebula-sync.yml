@@ -1,0 +1,15 @@
+services:
+  nebula-sync:
+    image: ghcr.io/lovelaze/nebula-sync:latest
+    container_name: nebula-sync
+    env_file:
+      - .env
+    environment:
+      - PRIMARY=${PIHOLE_PRIMARY_URL}|${PIHOLE_PRIMARY_PASSWORD}
+      - REPLICAS=${PIHOLE_SECONDARY_URL}|${PIHOLE_SECONDARY_PASSWORD}
+      - FULL_SYNC=false
+      - RUN_GRAVITY=false
+      - CLIENT_SKIP_TLS_VERIFICATION=true
+      - SYNC_CONFIG_DNS=true
+      - CRON=*/5 * * * *
+    restart: unless-stopped
