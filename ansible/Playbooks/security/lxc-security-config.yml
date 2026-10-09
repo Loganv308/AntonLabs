@@ -1,0 +1,65 @@
+- name: LXC security baseline
+  hosts: lxc
+  tasks:
+    - name: Harden sshd (drop-in wins over main config on Debian 12+)
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/10-hardening.conf
+        mode: "0644"
+        content: |
+          PermitRootLogin prohibit-password
+          PasswordAuthentication no
+          KbdInteractiveAuthentication no
+          X11Forwarding no
+          MaxAuthTries 3
+      notify: Restart ssh
+
+    - name: Validate sshd config before restart
+      ansible.builtin.command: sshd -t
+      changed_when: false
+
+    - name: Install unattended-upgrades
+      ansible.builtin.apt:
+        name: unattended-upgrades
+        state: present
+        update_cache: true
+      when: ansible_os_family == "Debian"
+
+    - name: Enable daily security updates
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        mode: "0644"
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+      when: ansible_os_family == "Debian"
+
+    - name: Collect listening ports
+      ansible.builtin.command: ss -tulpnH
+      register: ports
+      changed_when: false
+
+    - name: Show listening ports
+      ansible.builtin.debug:
+        var: ports.stdout_lines
+
+  handlers:
+    - name: Restart ssh
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
+
+- name: Flag privileged containers
+  hosts: antonlabsnode01
+  gather_facts: false
+  tasks:
+    - name: "Find containers without unprivileged: 1"
+      ansible.builtin.shell: |
+        for f in /etc/pve/nodes/*/lxc/*.conf; do
+          grep -q '^unprivileged: 1' "$f" || echo "PRIVILEGED: $(basename "$f" .conf) ($(awk '/^hostname:/{print $2}' "$f"))"
+        done
+      register: priv
+      changed_when: false
+
+    - name: Report
+      ansible.builtin.debug:
+        var: priv.stdout_lines

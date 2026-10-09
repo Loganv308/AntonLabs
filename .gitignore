@@ -1,1 +1,27 @@
+# Ansible inventory
+ansible/Inventory/*.yaml
+
+# Private host configuration
+ansible/Inventory/host_vars/
+ansible/Inventory/group_vars/local.yaml
+
+# SSH private keys
+*.pem
+*.key
+*.ppk
+id_rsa
+id_ed25519
+id_ecdsa
+
+# Credentials
 *.env
+.env
+.env.*
+!.env.example
+.vault-pass
+.vault_password
+vault-password.txt
+
+# Ansible artifacts
+*.retry
+__pycache__/
