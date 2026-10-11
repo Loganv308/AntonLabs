@@ -2,9 +2,8 @@
 ansible/Inventory/*.yaml
 
 # Private host configuration
-ansible/Inventory/host_vars/
-ansible/Inventory/group_vars/local.yaml
-ansible/group_var/*.yml
+ansible/Inventory/host_vars/ 
+ansible/Inventory/group_vars/ 
 
 # SSH private keys
 *.pem
@@ -26,3 +25,4 @@ vault-password.txt
 # Ansible artifacts
 *.retry
 __pycache__/
+.vault_pass
