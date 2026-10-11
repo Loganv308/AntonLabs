@@ -1,0 +1,94 @@
+---
+- name: Forward all logs to Graylog
+  hosts: all
+  become: true
+  tasks:
+    - name: Check Graylog is reachable from this host
+      ansible.builtin.wait_for:
+        host: "{{ graylog_server }}"
+        port: "{{ graylog_port }}"
+        timeout: 5
+
+    - name: Install rsyslog
+      ansible.builtin.package:
+        name: rsyslog
+        state: present
+
+    - name: Ensure rsyslog.d exists
+      ansible.builtin.file:
+        path: /etc/rsyslog.d
+        state: directory
+        mode: "0755"
+
+    - name: Replace busybox syslog with rsyslog (Alpine)
+      when: ansible_os_family == "Alpine"
+      block:
+        - name: Disable busybox syslog
+          ansible.builtin.service:
+            name: syslog
+            state: stopped
+            enabled: false
+        - name: Enable rsyslog at boot
+          ansible.builtin.service:
+            name: rsyslog
+            enabled: true
+
+    - name: Check for fail2ban log
+      ansible.builtin.stat:
+        path: /var/log/fail2ban.log
+      register: f2b_log
+
+    - name: Remove old Graylog configs
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/rsyslog.d/30-fail2ban-graylog.conf
+        - /etc/rsyslog.d/22-graylog.conf
+      notify: Restart rsyslog
+
+    - name: Deploy Graylog forwarding config
+      ansible.builtin.copy:
+        dest: /etc/rsyslog.d/30-graylog.conf
+        mode: "0644"
+        content: |
+          {% set imfile_inputs = (rsyslog_extra_files | default([]))
+               + ([{'path': '/var/log/fail2ban.log', 'tag': 'fail2ban'}] if f2b_log.stat.exists else []) %}
+          {% if imfile_inputs %}
+          module(load="imfile")
+          {% for f in imfile_inputs %}
+          input(type="imfile" File="{{ f.path }}" Tag="{{ f.tag }}:"
+                Facility="local0" Severity="{{ f.severity | default('info') }}")
+          {% endfor %}
+          {% endif %}
+          # forward everything (drop debug to cut noise; remove the condition to send it too)
+          if $syslogseverity <= 6 then {
+            action(type="omfwd" target="{{ graylog_server }}" port="{{ graylog_port }}"
+                   protocol="tcp" template="RSYSLOG_SyslogProtocol23Format"
+                   queue.type="LinkedList" queue.filename="graylog_fwd"
+                   queue.maxDiskSpace="256m" queue.saveOnShutdown="on"
+                   action.resumeRetryCount="-1" action.resumeInterval="30")
+          }
+
+          # keep fail2ban out of /var/log/syslog (it already has its own file)
+          if $programname == "fail2ban" then stop
+      notify: Restart rsyslog
+
+    - name: Validate full rsyslog config
+      ansible.builtin.command: rsyslogd -N1
+      changed_when: false
+
+    - name: Apply config before testing
+      ansible.builtin.meta: flush_handlers
+
+    - name: Send test event
+      ansible.builtin.command: >
+        logger -p authpriv.notice -t ansible-graylog-test
+        "forwarding test from {{ inventory_hostname }}"
+      changed_when: false
+
+  handlers:
+    - name: Restart rsyslog
+      ansible.builtin.service:
+        name: rsyslog
+        state: restarted

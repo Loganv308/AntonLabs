@@ -4,6 +4,7 @@ ansible/Inventory/*.yaml
 # Private host configuration
 ansible/Inventory/host_vars/
 ansible/Inventory/group_vars/local.yaml
+ansible/group_var/*.yml
 
 # SSH private keys
 *.pem
