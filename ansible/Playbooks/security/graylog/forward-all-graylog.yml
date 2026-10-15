@@ -62,14 +62,16 @@
           {% endfor %}
           {% endif %}
           # forward everything (drop debug to cut noise; remove the condition to send it too)
-          if $syslogseverity <= 6 then {
+          # forward everything except debug and systemd session-teardown noise
+          if $syslogseverity <= 6
+             and not ($programname == "systemd"
+                      and re_match($msg, "(user@[0-9]+\\.service|user-runtime-dir@|user-[0-9]+\\.slice|run-user-[0-9]+\\.mount|session-[0-9a-z]+\\.scope|exit\\.target|shutdown\\.target|systemd-exit\\.service)")) then {
             action(type="omfwd" target="{{ graylog_server }}" port="{{ graylog_port }}"
                    protocol="tcp" template="RSYSLOG_SyslogProtocol23Format"
                    queue.type="LinkedList" queue.filename="graylog_fwd"
                    queue.maxDiskSpace="256m" queue.saveOnShutdown="on"
                    action.resumeRetryCount="-1" action.resumeInterval="30")
           }
-
           # keep fail2ban out of /var/log/syslog (it already has its own file)
           if $programname == "fail2ban" then stop
       notify: Restart rsyslog

@@ -40,4 +40,4 @@
           changed: "{{ upgrade_result.changed | default(false) | lower }}"
           timestamp: "{{ ansible_date_time.iso8601 }}"
         status_code: [200, 202]
-      when: upgrade_result is defined
+      failed_when: false

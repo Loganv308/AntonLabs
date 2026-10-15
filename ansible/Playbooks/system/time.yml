@@ -1,0 +1,34 @@
+- name: Consistent time zone on every host
+  hosts: all
+  become: true
+  tasks:
+    - name: Install tzdata
+      ansible.builtin.package:
+        name: tzdata
+        state: present
+
+    - name: Set time zone
+      community.general.timezone:
+        name: "{{ homelab_timezone }}"
+      notify: Restart rsyslog
+
+  handlers:
+    - name: Restart rsyslog
+      ansible.builtin.service:
+        name: rsyslog
+        state: restarted
+
+- name: NTP on hosts that own a clock
+  hosts: proxmox:dns
+  become: true
+  tasks:
+    - name: Install chrony
+      ansible.builtin.apt:
+        name: chrony
+        state: present
+
+    - name: Enable chrony
+      ansible.builtin.service:
+        name: chrony
+        state: started
+        enabled: true

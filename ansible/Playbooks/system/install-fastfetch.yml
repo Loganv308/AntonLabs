@@ -1,0 +1,111 @@
+---
+- name: Install and configure Fastfetch
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Check whether Fastfetch is already installed
+      ansible.builtin.command: fastfetch --version
+      register: fastfetch_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Check whether Fastfetch is available through APT
+      ansible.builtin.command: apt-cache show fastfetch
+      register: fastfetch_apt_available
+      changed_when: false
+      failed_when: false
+      when:
+        - ansible_facts.os_family == "Debian"
+        - fastfetch_installed.rc != 0
+
+    - name: Install Fastfetch from APT
+      ansible.builtin.apt:
+        name: fastfetch
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+      when:
+        - ansible_facts.os_family == "Debian"
+        - fastfetch_installed.rc != 0
+        - fastfetch_apt_available.rc == 0
+
+    - name: Download Fastfetch Debian package for AMD64
+      ansible.builtin.get_url:
+        url: https://github.com/fastfetch-cli/fastfetch/releases/download/2.70.0/fastfetch-linux-amd64.deb
+        dest: /tmp/fastfetch.deb
+        mode: "0644"
+      when:
+        - ansible_facts.os_family == "Debian"
+        - ansible_facts.architecture == "x86_64"
+        - fastfetch_installed.rc != 0
+        - fastfetch_apt_available.rc != 0
+
+    - name: Download Fastfetch Debian package for ARM64
+      ansible.builtin.get_url:
+        url: https://github.com/fastfetch-cli/fastfetch/releases/download/2.70.0/fastfetch-linux-aarch64.deb
+        dest: /tmp/fastfetch.deb
+        mode: "0644"
+      when:
+        - ansible_facts.os_family == "Debian"
+        - ansible_facts.architecture == "aarch64"
+        - fastfetch_installed.rc != 0
+        - fastfetch_apt_available.rc != 0
+
+    - name: Install downloaded Fastfetch package
+      ansible.builtin.apt:
+        deb: /tmp/fastfetch.deb
+        state: present
+      when:
+        - ansible_facts.os_family == "Debian"
+        - ansible_facts.architecture in ["x86_64", "aarch64"]
+        - fastfetch_installed.rc != 0
+        - fastfetch_apt_available.rc != 0
+
+    - name: Verify Fastfetch installation
+      ansible.builtin.command: fastfetch --version
+      changed_when: false
+
+    - name: Gather local user account information
+      ansible.builtin.getent:
+        database: passwd
+
+    - name: Add Fastfetch to root Bash configuration
+      ansible.builtin.lineinfile:
+        path: /root/.bashrc
+        line: 'if command -v fastfetch >/dev/null 2>&1; then fastfetch; fi'
+        regexp: '^\s*(fastfetch|if command -v fastfetch.*fastfetch; fi)\s*$'
+        state: present
+        create: true
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Add Fastfetch to regular users' Bash configurations
+      ansible.builtin.blockinfile:
+        path: "{{ ansible_facts.getent_passwd[item][4] }}/.bashrc"
+        marker: "# {mark} ANSIBLE MANAGED FASTFETCH"
+        block: |
+          if command -v fastfetch >/dev/null 2>&1; then
+              fastfetch
+          fi
+        owner: "{{ item }}"
+        group: "{{ ansible_facts.getent_passwd[item][2] }}"
+        mode: "0644"
+        create: true
+      loop: "{{ ansible_facts.getent_passwd.keys() | list }}"
+      when:
+        - ansible_facts.getent_passwd[item][1] | int >= 1000
+        - ansible_facts.getent_passwd[item][1] | int < 65534
+        - ansible_facts.getent_passwd[item][4] is defined
+        - ansible_facts.getent_passwd[item][4] | length > 0
+
+    - name: Verify Fastfetch installation
+      ansible.builtin.command: fastfetch --version
+      register: fastfetch_version
+      changed_when: false
+
+    - name: Display installed version
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ fastfetch_version.stdout }}"
