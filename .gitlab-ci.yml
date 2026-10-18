@@ -34,6 +34,8 @@ variables:
     - !reference [.ansible, before_script]
     - chmod 600 "$ANSIBLE_SSH_KEY"
     - export ANSIBLE_PRIVATE_KEY_FILE="$ANSIBLE_SSH_KEY"
+    - cd ansible
+    - export ANSIBLE_CONFIG="$PWD/ansible.cfg"
 
 # ---------- jobs ----------
 
@@ -42,8 +44,9 @@ lint:
   stage: lint
   script:
     - yamllint -d relaxed .
+    - cd ansible
     - ansible-lint Playbooks/
-    - for pb in Playbooks/*.yml; do ansible-playbook --syntax-check -i Inventory/ "$pb"; done
+    - find Playbooks -name '*.yml' -print0 | xargs -0 -n1 ansible-playbook --syntax-check -i Inventory/
 
 plan:
   extends: .with_access
