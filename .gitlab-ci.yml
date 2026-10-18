@@ -1,0 +1,3 @@
+  - project: 'loganv308/antonlabs-ci-templates'
+    ref: main
+    file: 'gitlab/secret-scan.yml'

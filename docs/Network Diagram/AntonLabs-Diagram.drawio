@@ -1,0 +1,25 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 OPR/127.0.0.0">
+  <diagram name="Page-1" id="SO9nFh0XJYlcvLDqDLe0">
+    <mxGraphModel dx="2009" dy="1117" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Z6Y63-osZTQfyujDlctl-4" edge="1" parent="1" source="X_ObweA0MXYrdExNhZ25-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Z6Y63-osZTQfyujDlctl-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="X_ObweA0MXYrdExNhZ25-1" parent="1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="&lt;font face=&quot;Lucida Console&quot; style=&quot;font-size: 14px;&quot;&gt;Internet&lt;/font&gt;&lt;div&gt;&lt;font face=&quot;Lucida Console&quot; size=&quot;3&quot;&gt;135.134.223.46&lt;br&gt;(TDS 600/600)&lt;/font&gt;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="140" width="235" x="820" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="Z6Y63-osZTQfyujDlctl-6" edge="1" parent="1" source="Z6Y63-osZTQfyujDlctl-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Z6Y63-osZTQfyujDlctl-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Z6Y63-osZTQfyujDlctl-3" parent="1" style="fontColor=#0066CC;verticalAlign=top;verticalLabelPosition=bottom;labelPosition=center;align=center;html=1;outlineConnect=0;fillColor=#CCCCCC;strokeColor=#6881B3;gradientColor=none;gradientDirection=north;strokeWidth=2;shape=mxgraph.networks.modem;" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;TDS Provided Modem&lt;/font&gt;" vertex="1">
+          <mxGeometry height="60" width="210" x="832.5" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="Z6Y63-osZTQfyujDlctl-5" parent="1" style="sketch=0;aspect=fixed;pointerEvents=1;shadow=0;dashed=0;html=1;strokeColor=none;labelPosition=center;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#00188D;shape=mxgraph.mscae.enterprise.router" value="&lt;font style=&quot;font-size: 20px;&quot;&gt;Ubiquiti UDM Pro&lt;/font&gt;" vertex="1">
+          <mxGeometry height="140" width="179.49" x="847.75" y="340" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
