@@ -5,13 +5,19 @@
   vars:
     crowdsec_whitelist_name: "PromiseLAN"
     crowdsec_whitelist_cidr:
-      - "192.168.1.0/24"
+      - "10.10.0.0/24"
     crowdsec_db_path: "/var/lib/crowdsec/data/crowdsec.db"
     crowdsec_enroll_key: "{{ crowdsec_key }}" # Enrollment key from crowdsec portal
 
   tasks:
-    - name: Install CrowdSec using the official script
-      ansible.builtin.shell: "curl -s https://install.crowdsec.net | sh"
+    - name: Download CrowdSec repo install script
+      ansible.builtin.get_url:
+        url: https://install.crowdsec.net
+        dest: /tmp/crowdsec-install.sh
+        mode: "0700"
+
+    - name: Run CrowdSec repo install script
+      ansible.builtin.command: sh /tmp/crowdsec-install.sh
       args:
         creates: /usr/bin/crowdsec
 
@@ -20,21 +26,13 @@
         name: crowdsec
         state: present
 
-    - name: Backup old CrowdSec config (optional)
-      ansible.builtin.copy:
-        src: /etc/crowdsec/config.yaml
-        dest: "/etc/crowdsec/config.yaml.bak_{{ ansible_date_time.iso8601 }}"
-        remote_src: true
-      ignore_errors: true # in case the file doesn't exist
-
-    - name: Remove old CrowdSec config
-      ansible.builtin.file:
-        path: /etc/crowdsec/config.yaml
-        state: absent
-
-    - name: Deploy fresh CrowdSec config
+    - name: Deploy CrowdSec config
       ansible.builtin.copy:
         dest: /etc/crowdsec/config.yaml
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true # timestamped backup, only when the file actually changes
         content: |
           common:
             daemonize: true
@@ -93,10 +91,14 @@
             level: full
             listen_addr: 127.0.0.1
             listen_port: 6060
+      notify: Restart crowdsec
 
     - name: Add whitelist for local LAN
       ansible.builtin.copy:
         dest: "/etc/crowdsec/parsers/s02-enrich/01-my-whitelist.yaml"
+        owner: root
+        group: root
+        mode: "0644"
         content: |
           name: {{ crowdsec_whitelist_name }}
           description: "Whitelist events from my IP range"
@@ -106,17 +108,40 @@
             {% for cidr in crowdsec_whitelist_cidr %}
               - "{{ cidr }}"
             {% endfor %}
+      notify: Restart crowdsec
 
-    - name: Restart CrowdSec service
+    - name: Ensure CrowdSec is enabled and running
       ansible.builtin.systemd:
         name: crowdsec
-        state: restarted
+        state: started
         enabled: true
 
     - name: Enroll CrowdSec node
       ansible.builtin.command: "cscli console enroll {{ crowdsec_enroll_key }}"
+      args:
+        creates: /etc/crowdsec/.ansible-enrolled
       register: enroll_output
+      changed_when: true
+      no_log: true # keeps the enrollment key out of CI logs
+
+    - name: Mark node as enrolled
+      ansible.builtin.file:
+        path: /etc/crowdsec/.ansible-enrolled
+        state: touch
+        owner: root
+        group: root
+        mode: "0600"
+        modification_time: preserve
+        access_time: preserve
+      when: enroll_output is changed
 
     - name: Show enrollment output
       ansible.builtin.debug:
         var: enroll_output.stdout_lines
+      when: enroll_output is changed
+
+  handlers:
+    - name: Restart crowdsec
+      ansible.builtin.systemd:
+        name: crowdsec
+        state: restarted
