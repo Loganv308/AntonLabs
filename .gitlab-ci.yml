@@ -1,3 +1,77 @@
-  - project: 'loganv308/antonlabs-ci-templates'
+# AntonLabs CI/CD — lint, secret scan, plan, deploy, nightly drift check
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+include:
+  - project: '<gitlab-user>/antonlabs-ci-templates'
     ref: main
-    file: 'gitlab/secret-scan.yml'
+    file: 'gitlab/secret-scan.yml'      # adds the secret-scan job in the .pre stage
+
+stages: [lint, plan, deploy]
+
+variables:
+  ANSIBLE_FORCE_COLOR: "1"
+  ANSIBLE_HOST_KEY_CHECKING: "False"
+
+# ---------- shared setup ----------
+
+.ansible:
+  image: python:3.12-slim
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq openssh-client git >/dev/null
+    - pip install -q ansible ansible-lint yamllint
+    - if [ -f requirements.yml ]; then ansible-galaxy collection install -r requirements.yml; fi
+
+.with_access:
+  extends: .ansible
+  tags: [antonlabs]                     # only runs on your in-homelab runner
+  before_script:
+    - !reference [.ansible, before_script]
+    - chmod 600 "$ANSIBLE_SSH_KEY"
+    - export ANSIBLE_PRIVATE_KEY_FILE="$ANSIBLE_SSH_KEY"
+
+# ---------- jobs ----------
+
+lint:
+  extends: .ansible
+  stage: lint
+  script:
+    - yamllint -d relaxed .
+    - ansible-lint Playbooks/
+    - for pb in Playbooks/*.yml; do ansible-playbook --syntax-check -i Inventory/ "$pb"; done
+
+plan:
+  extends: .with_access
+  stage: plan
+  script:
+    - ansible-playbook -i Inventory/ Playbooks/site.yml --check --diff
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+deploy:
+  extends: .with_access
+  stage: deploy
+  script:
+    - ansible-playbook -i Inventory/ Playbooks/site.yml
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"
+      when: manual
+  environment: antonlabs
+
+drift:
+  extends: .with_access
+  stage: plan
+  script:
+    - set -o pipefail
+    - ansible-playbook -i Inventory/ Playbooks/site.yml --check --diff | tee drift.log
+    - "! grep -E '(changed|unreachable|failed)=[1-9]' drift.log"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
