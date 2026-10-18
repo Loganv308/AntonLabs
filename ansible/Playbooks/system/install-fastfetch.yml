@@ -74,8 +74,8 @@
     - name: Add Fastfetch to root Bash configuration
       ansible.builtin.lineinfile:
         path: /root/.bashrc
-        line: 'if command -v fastfetch >/dev/null 2>&1; then fastfetch; fi'
-        regexp: '^\s*(fastfetch|if command -v fastfetch.*fastfetch; fi)\s*$'
+        line: "if command -v fastfetch >/dev/null 2>&1; then fastfetch; fi"
+        regexp: "^\\s*(fastfetch|if command -v fastfetch.*fastfetch; fi)\\s*$"
         state: present
         create: true
         owner: root

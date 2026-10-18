@@ -29,13 +29,13 @@
       wazuh: /root/.ssh/wazuh_key.pub
   tasks:
     - name: Ensure ~/.ssh exists
-      file:
+      ansible.builtin.file:
         path: ~/.ssh
         state: directory
-        mode: '0700'
+        mode: "0700"
 
     - name: Deploy authorized key
-      authorized_key:
+      ansible.posix.authorized_key:
         user: root
         state: present
         key: "{{ lookup('file', ssh_keys[inventory_hostname]) }}"

@@ -5,12 +5,12 @@
   serial: 1
 
   vars_files:
-  - ../../group_vars/all/vault.yml
+    - ../../group_vars/all/vault.yml
 
   tasks:
     - name: Update apt cache
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
         cache_valid_time: 3600
 
     - name: Perform full-upgrade
@@ -21,11 +21,11 @@
 
     - name: Remove unused packages
       ansible.builtin.apt:
-        autoremove: yes
+        autoremove: true
 
     - name: Clean apt cache
       ansible.builtin.apt:
-        autoclean: yes
+        autoclean: true
 
     - name: Send upgrade event to Graylog via GELF
       ansible.builtin.uri:

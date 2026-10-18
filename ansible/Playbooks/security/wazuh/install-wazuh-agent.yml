@@ -11,38 +11,37 @@
     wazuh_tmp_path: "/tmp/{{ wazuh_deb }}"
 
   tasks:
-
     - name: Ensure required dependencies are present
-      apt:
+      ansible.builtin.apt:
         name: lsb-release
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Download Wazuh agent package
-      get_url:
+      ansible.builtin.get_url:
         url: "{{ wazuh_url }}"
         dest: "{{ wazuh_tmp_path }}"
-        mode: '0644'
+        mode: "0644"
 
     - name: Install Wazuh agent if missing
-      apt:
+      ansible.builtin.apt:
         deb: "{{ wazuh_tmp_path }}"
       environment:
         WAZUH_MANAGER: "{{ wazuh_manager_ip }}"
         WAZUH_AGENT_NAME: "{{ inventory_hostname }}"
       register: wazuh_install
-      ignore_errors: yes
+      ignore_errors: true
 
     - name: Reload systemd daemon
-      command: systemctl daemon-reload
+      ansible.builtin.command: systemctl daemon-reload
       changed_when: false
 
     - name: Enable wazuh-agent service
-      systemd:
+      ansible.builtin.systemd:
         name: wazuh-agent
-        enabled: yes
+        enabled: true
 
     - name: Start wazuh-agent service
-      systemd:
+      ansible.builtin.systemd:
         name: wazuh-agent
         state: started

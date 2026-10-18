@@ -7,33 +7,33 @@
     crowdsec_whitelist_cidr:
       - "192.168.1.0/24"
     crowdsec_db_path: "/var/lib/crowdsec/data/crowdsec.db"
-    crowdsec_enroll_key: "{{ crowdsec_key }}"  # Enrollment key from crowdsec portal
+    crowdsec_enroll_key: "{{ crowdsec_key }}" # Enrollment key from crowdsec portal
 
   tasks:
     - name: Install CrowdSec using the official script
-      shell: "curl -s https://install.crowdsec.net | sh"
+      ansible.builtin.shell: "curl -s https://install.crowdsec.net | sh"
       args:
         creates: /usr/bin/crowdsec
 
     - name: Ensure crowdsec package is installed
-      apt:
+      ansible.builtin.apt:
         name: crowdsec
         state: present
 
     - name: Backup old CrowdSec config (optional)
-      copy:
+      ansible.builtin.copy:
         src: /etc/crowdsec/config.yaml
         dest: "/etc/crowdsec/config.yaml.bak_{{ ansible_date_time.iso8601 }}"
-        remote_src: yes
-      ignore_errors: yes  # in case the file doesn't exist
+        remote_src: true
+      ignore_errors: true # in case the file doesn't exist
 
     - name: Remove old CrowdSec config
-      file:
+      ansible.builtin.file:
         path: /etc/crowdsec/config.yaml
         state: absent
 
     - name: Deploy fresh CrowdSec config
-      copy:
+      ansible.builtin.copy:
         dest: /etc/crowdsec/config.yaml
         content: |
           common:
@@ -95,7 +95,7 @@
             listen_port: 6060
 
     - name: Add whitelist for local LAN
-      copy:
+      ansible.builtin.copy:
         dest: "/etc/crowdsec/parsers/s02-enrich/01-my-whitelist.yaml"
         content: |
           name: {{ crowdsec_whitelist_name }}
@@ -108,15 +108,15 @@
             {% endfor %}
 
     - name: Restart CrowdSec service
-      systemd:
+      ansible.builtin.systemd:
         name: crowdsec
         state: restarted
-        enabled: yes
+        enabled: true
 
     - name: Enroll CrowdSec node
-      shell: "cscli console enroll {{ crowdsec_enroll_key }}"
+      ansible.builtin.command: "cscli console enroll {{ crowdsec_enroll_key }}"
       register: enroll_output
 
     - name: Show enrollment output
-      debug:
+      ansible.builtin.debug:
         var: enroll_output.stdout_lines

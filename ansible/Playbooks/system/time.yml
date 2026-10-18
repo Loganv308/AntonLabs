@@ -1,3 +1,4 @@
+---
 - name: Consistent time zone on every host
   hosts: all
   become: true
