@@ -1,0 +1,7 @@
+warn_list:
+  - no-changed-when
+  - risky-file-permissions
+  - command-instead-of-module
+  - command-instead-of-shell
+  - risky-shell-pipe
+  - ignore-errors

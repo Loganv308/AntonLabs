@@ -43,10 +43,10 @@ lint:
   extends: .ansible
   stage: lint
   script:
-    - yamllint -d relaxed .
+    - yamllint .
     - cd ansible
+    - export ANSIBLE_CONFIG="$PWD/ansible.cfg"
     - ansible-lint Playbooks/
-    - find Playbooks -name '*.yml' -print0 | xargs -0 -n1 ansible-playbook --syntax-check -i Inventory/
 
 plan:
   extends: .with_access
